@@ -35,4 +35,16 @@ public class CarService {
     public List<Car> find(int from, int to){
         return carDAO.find(from, to);
     }
+
+    public void save(Car car){
+        carDAO.save(car);
+    }
+
+    public Car update(Car car){
+        return carDAO.update(car);
+    }
+
+    public void delete(int id){
+        carDAO.delete(id);
+    }
 }

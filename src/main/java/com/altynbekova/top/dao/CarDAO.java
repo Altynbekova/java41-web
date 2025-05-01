@@ -22,6 +22,12 @@ public class CarDAO extends DAO<Car> {
                                                            "ORDER  BY count(*) %s FETCH FIRST 1 ROWS WITH TIES";
     private static final String SELECT_BY_YEAR = "select * from cars where year=?";
     private static final String SELECT_IN_PERIOD = "select * from cars where year>=? and year<=?";
+    private static final String INSERT = "insert into cars (name, manufacturer, volume, year, colour, type) " +
+                                         "values (?, ?, ?, ?, ?, ?::car_type);";
+    private static final String DELETE_BY_ID = "delete from cars where id=?";
+    private static final String UPDATE_BY_ID = "update cars set " +
+                                               "name=?, manufacturer = ?, volume=?, year=?, colour=?, type=?::car_type " +
+                                               "where id=?;";
     private TransactionManager txManager = new TransactionManager();
 
     @Override
@@ -178,6 +184,75 @@ public class CarDAO extends DAO<Car> {
         }
 
         return cars;
+    }
+
+    @Override
+    public void save(Car car) {
+        try {
+            txManager.init(this);
+
+            try (PreparedStatement statement = connection.prepareStatement(INSERT)) {
+                statement.setString(1, car.getName());
+                statement.setString(2, car.getManufacturer());
+                statement.setDouble(3, car.getVolume());
+                statement.setInt(4, car.getYear());
+                statement.setString(5, car.getColour());
+                statement.setString(6, car.getType().name());
+                statement.execute();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            txManager.end();
+        }
+    }
+
+    @Override
+    public Car update(Car car) {
+        try {
+            txManager.init(this);
+            try (PreparedStatement statement = connection.prepareStatement(UPDATE_BY_ID)) {
+                statement.setString(1, car.getName());
+                statement.setString(2, car.getManufacturer());
+                statement.setDouble(3, car.getVolume());
+                statement.setInt(4, car.getYear());
+                statement.setString(5, car.getColour());
+                statement.setString(6, car.getType().name());
+                statement.setLong(7, car.getId());
+                statement.execute();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            txManager.end();
+        }
+
+        return find(car.getId());
+    }
+
+    @Override
+    public void delete(int id) {
+        try {
+            txManager.init(this);
+
+            try (PreparedStatement statement = connection.prepareStatement(DELETE_BY_ID)) {
+                statement.setInt(1, id);
+                boolean updated = statement.execute();
+                if(!updated){
+                    System.out.println(statement.getUpdateCount());
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            txManager.end();
+        }
     }
 
     private static Car convert(ResultSet resultSet) throws SQLException {

@@ -12,4 +12,10 @@ public abstract class DAO<T extends AbstractEntity> {
     }
 
     public abstract T find(Long id);
+
+    public abstract void save(T entity);
+
+    public abstract T update(T entity);
+
+    public abstract void delete(int id);
 }
