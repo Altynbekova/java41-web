@@ -24,4 +24,15 @@ public class CarService {
     public Map<String, Integer> manufacturersCars(){
         return carDAO.manufacturersCars();
     }
+
+    public List<String> manufacturers(boolean topCarsAmount){
+        return carDAO.manufacturer(topCarsAmount);
+    }
+
+    public List<Car> find(int year){
+        return carDAO.find(year);
+    }
+    public List<Car> find(int from, int to){
+        return carDAO.find(from, to);
+    }
 }
