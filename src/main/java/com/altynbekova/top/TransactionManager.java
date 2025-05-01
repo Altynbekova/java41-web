@@ -1,6 +1,7 @@
 package com.altynbekova.top;
 
 import com.altynbekova.top.dao.DAO;
+import com.altynbekova.top.entity.AbstractEntity;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -12,14 +13,14 @@ public class TransactionManager {
     private static final String PASSWORD = "admin";
     private Connection connection;
 
-    public void init(DAO dao) throws SQLException {
+    public <T extends AbstractEntity> void init(DAO<T> dao) throws SQLException {
         if (connection == null) {
             connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
         }
         dao.setConnection(connection);
     }
 
-    public void commit(){
+    public void commit() {
         try {
             connection.commit();
         } catch (SQLException e) {
@@ -27,7 +28,7 @@ public class TransactionManager {
         }
     }
 
-    public void end(){
+    public void end() {
         if (connection != null) {
             try {
                 connection.close();
