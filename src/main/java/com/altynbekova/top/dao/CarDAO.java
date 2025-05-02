@@ -1,8 +1,12 @@
 package com.altynbekova.top.dao;
 
-import com.altynbekova.top.TransactionManager;
+import com.altynbekova.top.exception.DaoException;
+import com.altynbekova.top.exception.TransactionException;
+import com.altynbekova.top.util.TransactionManager;
 import com.altynbekova.top.entity.Car;
 import com.altynbekova.top.entity.CarType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 public class CarDAO extends DAO<Car> {
+    private static final Logger LOG = LoggerFactory.getLogger(CarDAO.class);
     private static final String SELECT_BY_ID = "select * from cars where id=?";
     private static final String SELECT_ALL = "select * from cars";
     private static final String SELECT_MANUFACTURERS = "select manufacturer from cars";
@@ -30,8 +35,20 @@ public class CarDAO extends DAO<Car> {
                                                "where id=?;";
     private TransactionManager txManager = new TransactionManager();
 
+    private static Car convert(ResultSet resultSet) throws SQLException {
+        Car car = new Car();
+        car.setId(resultSet.getLong("id"));
+        car.setName(resultSet.getString("name"));
+        car.setManufacturer(resultSet.getString("manufacturer"));
+        car.setYear(resultSet.getInt("year"));
+        car.setVolume(resultSet.getDouble("volume"));
+        car.setColour(resultSet.getString("colour"));
+        car.setType(CarType.valueOf(resultSet.getString("type")));
+        return car;
+    }
+
     @Override
-    public Car find(Long id) {
+    public Car find(Long id) throws DaoException {
         Car car = new Car();
         try {
             txManager.init(this);
@@ -42,10 +59,12 @@ public class CarDAO extends DAO<Car> {
                     return convert(resultSet);
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to find car by id={}", id, e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot find car by id={}.", id, e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
@@ -53,7 +72,7 @@ public class CarDAO extends DAO<Car> {
         return car;
     }
 
-    public List<Car> findAll() {
+    public List<Car> findAll() throws DaoException {
         List<Car> cars = new ArrayList<>();
         try {
             txManager.init(this);
@@ -64,10 +83,12 @@ public class CarDAO extends DAO<Car> {
                     cars.add(convert(resultSet));
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to find cars.", e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot find cars.", e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
@@ -75,7 +96,7 @@ public class CarDAO extends DAO<Car> {
         return cars;
     }
 
-    public List<String> findManufacturers() {
+    public List<String> findManufacturers() throws DaoException {
         List<String> manufacturers = new ArrayList<>();
         try {
             txManager.init(this);
@@ -86,17 +107,19 @@ public class CarDAO extends DAO<Car> {
                     manufacturers.add(resultSet.getString(1));
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to find cars manufacturers.", e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot find cars manufacturers.", e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
         return manufacturers;
     }
 
-    public Map<String, Integer> manufacturersCars() {
+    public Map<String, Integer> manufacturersCars() throws DaoException {
         Map<String, Integer> manufacturersCars = new HashMap<>();
         try {
             txManager.init(this);
@@ -107,39 +130,45 @@ public class CarDAO extends DAO<Car> {
                     manufacturersCars.put(resultSet.getString(1), resultSet.getInt(2));
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to define cars amount for every manufacturer.", e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot define cars amount for every manufacturer.", e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
         return manufacturersCars;
     }
 
-    public List<String> manufacturer(boolean topCarsAmount) {
+    public List<String> manufacturer(boolean top) throws DaoException {
         List<String> manufacturers = new ArrayList<>();
         try {
             txManager.init(this);
 
             try (PreparedStatement statement = connection.prepareStatement(
-                    String.format(TOP_OR_LOW_MANUFACTURERS, topCarsAmount ? "desc" : "asc"))) {
+                    String.format(TOP_OR_LOW_MANUFACTURERS, top ? "desc" : "asc"))) {
                 ResultSet resultSet = statement.executeQuery();
                 while (resultSet.next()) {
                     manufacturers.add(resultSet.getString(1));
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to find manufacturers of {} cars amount.",
+                        top ? "highest" : "lowest", e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot find manufacturers of {} cars amount.",
+                    top ? "highest" : "lowest", e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
         return manufacturers;
     }
 
-    public List<Car> find(int year) {
+    public List<Car> find(int year) throws DaoException {
         List<Car> cars = new ArrayList<>();
         try {
             txManager.init(this);
@@ -151,10 +180,12 @@ public class CarDAO extends DAO<Car> {
                     cars.add(convert(resultSet));
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to find cars manufactured in {}.", year, e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot find cars manufactured in {}.", year, e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
@@ -162,7 +193,7 @@ public class CarDAO extends DAO<Car> {
         return cars;
     }
 
-    public List<Car> find(int from, int to) {
+    public List<Car> find(int from, int to) throws DaoException {
         List<Car> cars = new ArrayList<>();
         try {
             txManager.init(this);
@@ -175,10 +206,12 @@ public class CarDAO extends DAO<Car> {
                     cars.add(convert(resultSet));
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to find cars manufactured in period {}-{}.", from, to, e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot find cars manufactured in period {}-{}.", from, to, e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
@@ -187,7 +220,7 @@ public class CarDAO extends DAO<Car> {
     }
 
     @Override
-    public void save(Car car) {
+    public void save(Car car) throws DaoException {
         try {
             txManager.init(this);
 
@@ -200,17 +233,19 @@ public class CarDAO extends DAO<Car> {
                 statement.setString(6, car.getType().name());
                 statement.execute();
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to save {}.", car, e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot save {}.", car, e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
     }
 
     @Override
-    public Car update(Car car) {
+    public Car update(Car car) throws DaoException {
         try {
             txManager.init(this);
             try (PreparedStatement statement = connection.prepareStatement(UPDATE_BY_ID)) {
@@ -223,10 +258,12 @@ public class CarDAO extends DAO<Car> {
                 statement.setLong(7, car.getId());
                 statement.execute();
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to update {}.", car, e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot update {}.", car, e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
@@ -235,35 +272,25 @@ public class CarDAO extends DAO<Car> {
     }
 
     @Override
-    public void delete(int id) {
+    public void delete(int id) throws DaoException {
         try {
             txManager.init(this);
 
             try (PreparedStatement statement = connection.prepareStatement(DELETE_BY_ID)) {
                 statement.setInt(1, id);
                 boolean updated = statement.execute();
-                if(!updated){
+                if (!updated) {
                     System.out.println(statement.getUpdateCount());
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot create statement to delete car by id={}.", id, e);
+                throw new DaoException(e);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (TransactionException e) {
+            LOG.error("Cannot delete car by id={}.", id, e);
+            throw new DaoException(e);
         } finally {
             txManager.end();
         }
-    }
-
-    private static Car convert(ResultSet resultSet) throws SQLException {
-        Car car = new Car();
-        car.setId(resultSet.getLong("id"));
-        car.setName(resultSet.getString("name"));
-        car.setManufacturer(resultSet.getString("manufacturer"));
-        car.setYear(resultSet.getInt("year"));
-        car.setVolume(resultSet.getDouble("volume"));
-        car.setColour(resultSet.getString("colour"));
-        car.setType(CarType.valueOf(resultSet.getString("type")));
-        return car;
     }
 }

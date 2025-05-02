@@ -1,30 +1,40 @@
-package com.altynbekova.top;
+package com.altynbekova.top.util;
 
 import com.altynbekova.top.dao.DAO;
 import com.altynbekova.top.entity.AbstractEntity;
+import com.altynbekova.top.exception.TransactionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class TransactionManager {
+    private static final Logger LOG = LoggerFactory.getLogger(TransactionManager.class);
     private static final String URL = "jdbc:postgresql://localhost:5432/postgres";
     private static final String USERNAME = "postgres";
-    private static final String PASSWORD = "admin";
+    private static final String PASSWORD = "admin2";
     private Connection connection;
 
-    public <T extends AbstractEntity> void init(DAO<T> dao) throws SQLException {
+    public <T extends AbstractEntity> void init(DAO<T> dao) throws TransactionException{
         if (connection == null) {
-            connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+            try {
+                connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+            } catch (SQLException e) {
+                LOG.error("Cannot connect to database.", e);
+                throw new TransactionException(e);
+
+            }
         }
         dao.setConnection(connection);
     }
 
-    public void commit() {
+    public void commit() throws TransactionException{
         try {
             connection.commit();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new TransactionException(e);
         }
     }
 
@@ -33,7 +43,7 @@ public class TransactionManager {
             try {
                 connection.close();
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                LOG.error("Cannot close connection.", e);
             } finally {
                 connection = null;
             }
